@@ -1,0 +1,122 @@
+"""
+Project 3: AI Recommendation Logic
+DecodeLabs Industrial Training Kit - Batch 2026
+Description: Content-based recommendation system using similarity logic
+"""
+
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics.pairwise import cosine_similarity
+
+# ====================== ITEM CATALOG (Course / Product Database) ======================
+data = {
+    "item_id": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "name": [
+        "Python for Beginners", "Machine Learning A-Z", "Web Development Bootcamp",
+        "Data Science with Python", "Deep Learning Specialization", "SQL & Database Mastery",
+        "Java Programming Masterclass", "AI Ethics & Society", "React.js Advanced",
+        "Natural Language Processing"
+    ],
+    "category": ["Programming", "ML", "Web", "Data Science", "ML", "Database", 
+                 "Programming", "AI", "Web", "ML"],
+    "difficulty": [2, 4, 3, 4, 5, 2, 3, 3, 4, 5],           # Scale 1-5
+    "duration_hours": [25, 45, 35, 50, 60, 20, 40, 30, 28, 55],
+    "rating": [4.8, 4.7, 4.6, 4.8, 4.9, 4.5, 4.4, 4.6, 4.7, 4.8]
+}
+
+df = pd.DataFrame(data)
+
+print("📚 Available Learning Resources:")
+print(df[["name", "category", "difficulty", "duration_hours", "rating"]].to_string(index=False))
+
+# ====================== FEATURE ENGINEERING FOR SIMILARITY ======================
+def create_feature_matrix(df):
+    # Normalize numerical features
+    scaler = MinMaxScaler()
+    numerical_features = scaler.fit_transform(df[["difficulty", "duration_hours", "rating"]])
+    
+    # One-hot encode category
+    category_dummies = pd.get_dummies(df['category'])
+    
+    # Combine features
+    feature_matrix = pd.concat([
+        pd.DataFrame(numerical_features, columns=["norm_difficulty", "norm_duration", "norm_rating"]),
+        category_dummies.reset_index(drop=True)
+    ], axis=1)
+    
+    return feature_matrix
+
+feature_matrix = create_feature_matrix(df)
+
+# ====================== GET USER PREFERENCES ======================
+def get_user_preferences():
+    print("\n" + "="*60)
+    print("👤 Let's personalize your recommendations!")
+    print("="*60)
+    
+    interests_input = input("\nEnter your interested areas (comma separated):\n"
+                          "e.g. ML, Programming, Web, Data Science, AI\n> ")
+    interests = [x.strip().title() for x in interests_input.split(',')]
+    
+    try:
+        preferred_difficulty = int(input("Preferred difficulty level (1-5): "))
+        max_hours = int(input("Maximum hours you're willing to invest: "))
+    except:
+        preferred_difficulty = 3
+        max_hours = 40
+    
+    return {
+        "interests": interests,
+        "preferred_difficulty": preferred_difficulty,
+        "max_hours": max_hours
+    }
+
+# ====================== RECOMMENDATION ENGINE ======================
+def get_recommendations(user_prefs, top_n=5):
+    # Create user preference vector
+    user_vector = np.zeros(feature_matrix.shape[1])
+    
+    # Category matching
+    for interest in user_prefs["interests"]:
+        if interest in feature_matrix.columns:
+            idx = feature_matrix.columns.get_loc(interest)
+            user_vector[idx] = 1.0
+    
+    # Normalize numerical preferences
+    user_vector[0] = user_prefs["preferred_difficulty"] / 5.0   # difficulty
+    user_vector[1] = min(user_prefs["max_hours"] / 60.0, 1.0)   # duration
+    
+    # Calculate similarity
+    user_vector = user_vector.reshape(1, -1)
+    similarities = cosine_similarity(user_vector, feature_matrix).flatten()
+    
+    # Add to dataframe and filter
+    df_copy = df.copy()
+    df_copy['similarity_score'] = similarities
+    df_copy = df_copy[df_copy['duration_hours'] <= user_prefs["max_hours"]]
+    
+    # Get top recommendations
+    recommendations = df_copy.nlargest(top_n, 'similarity_score')
+    
+    print(f"\n🌟 Top {top_n} Personalized Recommendations:")
+    print("-" * 70)
+    for _, rec in recommendations.iterrows():
+        print(f"📌 {rec['name']}")
+        print(f"   Category     : {rec['category']}")
+        print(f"   Difficulty   : {rec['difficulty']}/5")
+        print(f"   Duration     : {rec['duration_hours']} hours")
+        print(f"   Rating       : {rec['rating']}/5")
+        print(f"   Match Score  : {rec['similarity_score']:.3f}")
+        print("-" * 50)
+
+# ====================== MAIN EXECUTION ======================
+if __name__ == "__main__":
+    print("🚀 DecodeLabs AI Recommendation System")
+    print("   Personalized Learning Path Generator\n")
+    
+    user_preferences = get_user_preferences()
+    get_recommendations(user_preferences, top_n=5)
+    
+    print("\n✅ Thank you for using the Recommendation Engine!")
+    print("   This demonstrates content-based filtering using similarity logic.")
