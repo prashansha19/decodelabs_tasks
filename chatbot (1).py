@@ -1,32 +1,12 @@
 """
 Project 1: Rule-Based AI Chatbot
 DecodeLabs Industrial Training Kit - Batch 2026
-
-A console chatbot built entirely on dictionary lookups (no if-elif chains).
-
-Meets all 5 required specs:
-  1. Input Loop      - continuous 'while True' loop
-  2. Sanitization     - handles case & whitespace
-  3. Knowledge Base   - dictionary with 15 intents (spec required 5+)
-  4. Fallback         - default reply for unknown input
-  5. Exit Strategy    - clean break command
-
-Extra (safe) additions:
-  - Typo tolerance via difflib
-  - Personality / randomized replies
-  - Simple utilities (time, date) - still rule-based (if 'time' in input -> run code)
-  - Remembers the user's name
 """
 
 import random
 from datetime import datetime
 from difflib import get_close_matches
 
-# ---------------------------------------------------------
-# KNOWLEDGE BASE (15 intents)
-# key = keyword/phrase to look for in user input
-# value = a reply, or a list of replies (random choice picked)
-# ---------------------------------------------------------
 responses = {
     "hello": ["Hi there! How can I help you today?", "Hey! Good to see you."],
     "hi": ["Hello!", "Hi! What's on your mind?"],
